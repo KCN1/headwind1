@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>headwind</title>
+</head>
+<body>
+<table>
+    <thead>
+    <tr>
+        <th>date</th>
+        <th>time</th>
+        <th>temperature</th>
+        <th>wind direction</th>
+        <th>wind speed</th>
+        <th>wind gusts</th>
+        <th>precipitation</th>
+        <th>pbl thickness</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for forecast in forecasts -%}
+    <tr>
+        <th>{{forecast.date}}</th>
+        <td>{{forecast.time}}</td>
+        <td>{{forecast.temperature}}</td>
+        <td>{{forecast.wind_direction}}</td>
+        <td>{{forecast.wind_speed}}</td>
+        <td>{{forecast.wind_gusts}}</td>
+        <td>{{forecast.precipitation}}</td>
+        <td>{{forecast.pbl_thickness}}</td>
+    </tr>
+    {% endfor -%}
+    </tbody>
+</table>
+</body>
+</html>

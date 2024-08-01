@@ -1,0 +1,9 @@
+https://nomads.ncep.noaa.gov/dods/gfs_0p25/gfs20240721/gfs_0p25_18z.ascii?tmpsfc[0:24][584][176]
+
+https://nomads.ncep.noaa.gov/dods/gfs_0p25/gfs20240724/gfs_0p25_06z.ascii?hpblsfc[0:24][585][176],ugrdprs[0:24][0:5][585][176],vgrdprs[0:24][0:5][585][176],ugrd10m[0:24][585][176],vgrd10m[0:24][585][176],ugrd100m[0:24][585][176],vgrd100m[0:24][585][176]
+
+https://nomads.ncep.noaa.gov/dods/gfs_0p25/gfs20240724/gfs_0p25_06z.ascii?vgrd10m[0:24][585][176],ugrd100m[0:24][585][176],vgrd100m[0:24][585][176]
+
+
+
+
