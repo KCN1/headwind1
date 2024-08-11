@@ -4,6 +4,3 @@ https://nomads.ncep.noaa.gov/dods/gfs_0p25/gfs20240724/gfs_0p25_06z.ascii?hpblsf
 
 https://nomads.ncep.noaa.gov/dods/gfs_0p25/gfs20240724/gfs_0p25_06z.ascii?vgrd10m[0:24][585][176],ugrd100m[0:24][585][176],vgrd100m[0:24][585][176]
 
-
-
-

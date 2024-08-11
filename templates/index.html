@@ -6,7 +6,7 @@
 </head>
 <body>
 <table>
-    <thead>
+    <tbody>
     <tr>
         <th>date</th>
         <th>time</th>
@@ -17,8 +17,6 @@
         <th>precipitation</th>
         <th>pbl thickness</th>
     </tr>
-    </thead>
-    <tbody>
     {% for forecast in forecasts -%}
     <tr>
         <th>{{forecast.date}}</th>

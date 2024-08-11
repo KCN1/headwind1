@@ -4,7 +4,7 @@ from decimal import Decimal
 import datetime
 from pydantic import BaseModel
 from fastapi.templating import Jinja2Templates
-from typing import List
+from typing import List, Union
 
 
 class Forecast(BaseModel):
@@ -20,7 +20,7 @@ class Forecast(BaseModel):
 
 class DailyForecast(BaseModel):
     date: datetime.date = datetime.date(2024, 8, 1)
-    forecast_list: List[Forecast] = []
+    forecast_list: Union[List[Forecast], None] = None
 
 
 forecast1 = Forecast(temperature=20)
