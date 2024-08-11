@@ -1,10 +1,12 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Query
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from decimal import Decimal
 import datetime
 from pydantic import BaseModel
 from fastapi.templating import Jinja2Templates
 from typing import List, Union
+import parse
+
 
 
 class Forecast(BaseModel):
@@ -37,11 +39,12 @@ def get_root(request: Request):
     return my_templates.TemplateResponse(request=request, name='index.html', context={'forecasts': forecasts})
 
 
-@app.get('/api/')
+@app.get('/api/forecast')
 def get_api():
-    return RedirectResponse('/api/v1/')
+    return RedirectResponse('/api/v1/forecast')
 
 
-@app.get('/api/v1/', response_class=JSONResponse)
-def get_api_v1():
-    return forecasts
+@app.get('/api/v1/forecast', response_class=JSONResponse)
+def get_api_v1(lat: float, lon: float, keyword: List[str] = Query(), lev: List[int] = Query(default=[0]), days: int = 3, utc_offset: int = 3):
+    forecast = parse.parse(latitude=lat, longitude=lon, utc_offset=utc_offset, data_keys=keyword, levels=lev, forecast_days=days)
+    return forecast

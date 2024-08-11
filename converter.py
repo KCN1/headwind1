@@ -1,7 +1,7 @@
 import datetime
 
 
-def time(d):
+def time(d: float):
     return datetime.datetime.combine(datetime.date(2024, 8, 1) + datetime.timedelta(days=int(d - 739100)),
                                      datetime.time(hour=(round(24 * (d % 1)))))
 
