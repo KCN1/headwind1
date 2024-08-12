@@ -1,6 +1,7 @@
 import datetime
 import json
 import re
+import time
 
 from pprint import pprint
 from typing import List, Dict, Union
@@ -63,7 +64,7 @@ def get_time_as_datetime(utc_offset=0):
 
 def get_time_as_str(utc_offset=0):
     def func(d):
-        return (converter.time(d) + datetime.timedelta(hours=utc_offset)).isoformat()
+        return (converter.time(d) + datetime.timedelta(hours=utc_offset)).isoformat(sep=' ', timespec='minutes')
     return func
 
 
@@ -73,63 +74,52 @@ def get_data(data_arr, utc_offset):
     return time_vals, data_vals
 
 
-class ForecastData(BaseModel):
-    name: str
-    lev: Union[int, Decimal] = 0
-    utc_offset: int = 0
-    time: List[Union[str, datetime.datetime]]
-    data: List[Union[float, Decimal]]
-
-
-class Forecast(BaseModel):
-    latitude: float
-    longitude: float
-    levels: List[Decimal]
-    forecast_data: Dict[str, Union[List[Decimal], Dict[Decimal, List[Decimal]]]] = Field(default_factory=dict)
-
-
-def parse(latitude, longitude, utc_offset, data_keys, levels, forecast_days):
+def parse(latitude, longitude, data_keys, levels, forecast_days=3, utc_offset=0):
     lat_index = round(latitude * 4) + 360
     lon_index = (round(longitude * 4) + 1440) % 1440
     lev_indices = [AVAIL_LEVELS.index(min(AVAIL_LEVELS, key=lambda x: abs(x - lev))) for lev in levels]
     lev_indices_int = list(filter(lambda x: x <= 32, lev_indices))
     url = get_dataset_url()
+    pydap_dataset = open_url(url)
     with open('cache_parse.json', 'r') as cache_fp:
         cached_forecast = json.load(cache_fp)
-    if ((url, data_keys, lat_index, lon_index, lev_indices_int) !=
-            tuple(map(cached_forecast.get, ['url', 'data_keys','lat_index', 'lon_index', 'lev_indices']))):
-        pydap_dataset = open_url(url)
+    for keyword in ['url', 'lat_index', 'lon_index', 'forecast_days', 'forecast']:
+        cached_forecast.setdefault(keyword, None)
+    if (url, lat_index, lon_index, forecast_days) == tuple(map(cached_forecast.get, ['url', 'lat_index', 'lon_index',
+                                                                                     'forecast_days'])):
+        forecast = cached_forecast['forecast']
+    else:
         forecast = {}
-        for data_key in data_keys:
-            dataset = pydap_dataset[data_key]
-            if len(dataset.shape) == 4:
-                tmp = {}
-                for lev_index in lev_indices_int:
+    for data_key in data_keys:
+        dataset = pydap_dataset[data_key]
+        if len(dataset.shape) == 4:
+            for lev_index in lev_indices_int:
+                data_single_level = {}
+                if data_key not in forecast or f'{AVAIL_LEVELS[lev_index]}mb' not in forecast[data_key]:
                     sleep(1)
-                    data_arr = dataset[0:8 * forecast_days + 1, lev_index, lat_index, lon_index]  # HERE COMES THE DATA!
+                    data_arr = dataset[0:8 * forecast_days, lev_index, lat_index, lon_index]  # HERE COMES THE DATA!
                     time_vals, data_vals = get_data(data_arr, utc_offset)
                     forecast.setdefault('time', time_vals)
                     assert forecast['time'][0] == time_vals[0]
-                    tmp[AVAIL_LEVELS[lev_index]] = data_vals
-                    # for datime, data_piece in zip(get_data(data_arr, utc_offset)):
-                    #     forecast[datime].setdefault(data_key, {}).update({AVAIL_LEVELS[lev_index]: data_piece})
-                forecast[data_key] = tmp
-            elif len(dataset.shape) == 3:
+                    data_single_level[f'{AVAIL_LEVELS[lev_index]}mb'] = data_vals
+                    forecast.setdefault(data_key, {}).update(data_single_level)
+        elif len(dataset.shape) == 3:
+            if data_key not in forecast:
                 sleep(1)
-                data_arr = dataset[0:8 * forecast_days + 1, lat_index, lon_index]  # HERE COMES THE DATA!
+                data_arr = dataset[0:8 * forecast_days, lat_index, lon_index]  # HERE COMES THE DATA!
                 time_vals, data_vals = get_data(data_arr, utc_offset)
                 forecast.setdefault('time', time_vals)
                 assert forecast['time'][0] == time_vals[0]
                 forecast[data_key] = data_vals
-                # for datime, data_piece in zip(get_data(data_arr, utc_offset)):
-                #     forecast.setdefault(datime, {}).update({data_key: data_piece})
-            else:
-                raise ValueError(f'Number of data columns dataset.shape = {dataset.shape} should be either 3 or 4.')
-        cached_forecast = {'url': url, 'lat_index': lat_index, 'lon_index': lon_index, 'lev_indices': lev_indices_int,
-                           'data_keys': data_keys, 'forecast': forecast}
-        with open('cache_parse.json', 'w') as cache_fp:
-            json.dump(cached_forecast, cache_fp)
-    return cached_forecast['forecast']
+        else:
+            raise ValueError(f'Number of data columns {dataset.shape=} should be either 3 or 4.')
+    cached_forecast = {'url': url, 'lat_index': lat_index, 'lon_index': lon_index,
+                       'forecast_days': forecast_days, 'forecast': forecast}
+    with open('cache_parse.json', 'w') as cache_fp:
+        json.dump(cached_forecast, cache_fp)
+    return {data_key: cached_forecast['forecast'][data_key] for data_key in data_keys+['time']}
+    # TODO: Unify datasets for leveled and single-level data; new keywords for calculated data: gradient, wind etc.
+    # TODO: JSON cache for each coordinate set; shorter forecasts from longer cache; 'touch cache_latlon.json'
 
 
 def main():
@@ -138,13 +128,14 @@ def main():
     longitude = 44
     utc_offset = 3
 
-    data_keys = ['ugrd10m', 'vgrd10m', 'ugrdprs', 'vgrdprs']
+    data_keys = ['prateavesfc', 'tmp80m', 'tmp2m', 'tmpprs', 'hpblsfc']
     levels = [950, 900]
-    forecast_days = 1
-
-    forecast = parse(latitude, longitude, utc_offset, data_keys, levels, forecast_days)
-
+    forecast_days = 3
+    t0 = time.perf_counter()
+    forecast = parse(latitude, longitude, data_keys, levels, forecast_days, utc_offset)
+    t1 = time.perf_counter()
     pprint(forecast)
+    print(t1 - t0)
 
 
 if __name__ == '__main__':
