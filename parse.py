@@ -7,6 +7,8 @@ from pprint import pprint
 from typing import List, Dict, Union
 import requests
 from time import sleep
+
+import requests_cache
 from pydantic import BaseModel, Field
 from pydap.client import open_url
 from decimal import Decimal
@@ -27,16 +29,17 @@ URL2 = r"http://nomads.ncep.noaa.gov:80/dods/gfs_0p25/gfs\d{8}/gfs_0p25_\d{2}z.i
 
 
 def get_dataset_url():
-    html = requests.get(URL0)
+    cache_session = requests_cache.CachedSession('.cache_parse', expire_after=3600)
+    html = cache_session.get(URL0)
     urls = re.findall(URL1, html.text)
     assert len(urls) == 10, f'Something is wrong on date selection page: {html.text}'
     url = urls[-1]
     assert url == max(urls), f'Last date is not last in the list: {urls}'
-    html = requests.get(url)
+    html = cache_session.get(url)
     urls1 = re.findall(URL2, html.text)
     if not urls1:
         url = urls[-2]
-        html = requests.get(url)
+        html = cache_session.get(url)
         urls1 = re.findall(URL2, html.text)
     assert urls1, f'Something wrong on time selection page: {html.text}'
     url = urls1[-1]
@@ -64,7 +67,7 @@ def get_time_as_datetime(utc_offset=0):
 
 def get_time_as_str(utc_offset=0):
     def func(d):
-        return (converter.time(d) + datetime.timedelta(hours=utc_offset)).isoformat(sep=' ', timespec='minutes')
+        return (converter.time(d) + datetime.timedelta(hours=utc_offset)).isoformat(timespec='minutes')
     return func
 
 
@@ -92,7 +95,7 @@ def parse(latitude, longitude, data_keys, levels, forecast_days=3, utc_offset=0)
         forecast = {}
     for data_key in data_keys:
         dataset = pydap_dataset[data_key]
-        if len(dataset.shape) == 4:
+        if len(dataset.shape) == 4:  # for leveled data
             for lev_index in lev_indices_int:
                 data_single_level = {}
                 if data_key not in forecast or f'{AVAIL_LEVELS[lev_index]}mb' not in forecast[data_key]:
@@ -103,7 +106,7 @@ def parse(latitude, longitude, data_keys, levels, forecast_days=3, utc_offset=0)
                     assert forecast['time'][0] == time_vals[0]
                     data_single_level[f'{AVAIL_LEVELS[lev_index]}mb'] = data_vals
                     forecast.setdefault(data_key, {}).update(data_single_level)
-        elif len(dataset.shape) == 3:
+        elif len(dataset.shape) == 3:  # for single-level data
             if data_key not in forecast:
                 sleep(1)
                 data_arr = dataset[0:8 * forecast_days, lat_index, lon_index]  # HERE COMES THE DATA!
@@ -128,12 +131,14 @@ def main():
     longitude = 44
     utc_offset = 3
 
-    data_keys = ['prateavesfc', 'tmp80m', 'tmp2m', 'tmpprs', 'hpblsfc']
+    data_keys = ['prateavesfc', 'tmp80m', 'tmp2m', 'tmpprs', 'hpblsfc', 'lcdcavelcll', 'tcdcaveclm']
     levels = [950, 900]
-    forecast_days = 3
+    forecast_days = 10
+
     t0 = time.perf_counter()
     forecast = parse(latitude, longitude, data_keys, levels, forecast_days, utc_offset)
     t1 = time.perf_counter()
+
     pprint(forecast)
     print(t1 - t0)
 

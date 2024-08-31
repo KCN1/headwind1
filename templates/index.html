@@ -3,32 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <title>headwind</title>
+    <style>
+        th,td {width: 150px; text-align: center}
+    </style>
 </head>
 <body>
 <table>
     <tbody>
-    <tr>
-        <th>date</th>
-        <th>time</th>
-        <th>temperature</th>
-        <th>wind direction</th>
-        <th>wind speed</th>
-        <th>wind gusts</th>
-        <th>precipitation</th>
-        <th>pbl thickness</th>
-    </tr>
-    {% for forecast in forecasts -%}
-    <tr>
-        <th>{{forecast.date}}</th>
-        <td>{{forecast.time}}</td>
-        <td>{{forecast.temperature}}</td>
-        <td>{{forecast.wind_direction}}</td>
-        <td>{{forecast.wind_speed}}</td>
-        <td>{{forecast.wind_gusts}}</td>
-        <td>{{forecast.precipitation}}</td>
-        <td>{{forecast.pbl_thickness}}</td>
-    </tr>
-    {% endfor -%}
+        <tr>
+            <th><small>date</small></th>
+            <th><small>time</small></th>
+            <th><small>temperature</small></th>
+            <th><small>wind direction</small></th>
+            <th><small>wind speed</small></th>
+            <th><small>wind gusts</small></th>
+            <th><small>precipitation</small></th>
+            <th><small>pbl thickness</small></th>
+        </tr>
+        {% for dt, forecast in forecasts.items() -%}
+            <tr>
+                <th>{{dt.strftime('%a %d.%m.%y')}}</th>
+                <td>{{forecast.time.isoformat(timespec='minutes')}}</td>
+                <td>{{forecast.temperature}}</td>
+                <td>{{forecast.wind_direction}}</td>
+                <td>{{forecast.wind_speed}}</td>
+                <td>{{forecast.wind_gusts}}</td>
+                <td>{{forecast.precipitation}}</td>
+                <td>{{forecast.pbl_thickness}}</td>
+            </tr>
+        {% endfor -%}
     </tbody>
 </table>
 </body>
