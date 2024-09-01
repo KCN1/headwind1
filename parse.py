@@ -1,5 +1,6 @@
 import datetime
 import json
+
 import re
 import time
 
@@ -77,19 +78,21 @@ def get_data(data_arr, utc_offset):
     return time_vals, data_vals
 
 
-def parse(latitude, longitude, data_keys, levels, forecast_days=3, utc_offset=0):
+def parse(latitude, longitude, data_keys, levels=(), forecast_days=3, utc_offset=0):
     lat_index = round(latitude * 4) + 360
     lon_index = (round(longitude * 4) + 1440) % 1440
     lev_indices = [AVAIL_LEVELS.index(min(AVAIL_LEVELS, key=lambda x: abs(x - lev))) for lev in levels]
     lev_indices_int = list(filter(lambda x: x <= 32, lev_indices))
     url = get_dataset_url()
-    pydap_dataset = open_url(url)
+
+    pydap_dataset = open_url(url) # using CachedSession leads to 304: Not Modified; likely due to a circular redirect
+    # TODO: How to cache DatasetType if url has not changed? Pickle or JSON or PyDAP handlers?
+
     with open('cache_parse.json', 'r') as cache_fp:
         cached_forecast = json.load(cache_fp)
     for keyword in ['url', 'lat_index', 'lon_index', 'forecast_days', 'forecast']:
         cached_forecast.setdefault(keyword, None)
-    if (url, lat_index, lon_index, forecast_days) == tuple(map(cached_forecast.get, ['url', 'lat_index', 'lon_index',
-                                                                                     'forecast_days'])):
+    if (url, lat_index, lon_index, forecast_days) == tuple(map(cached_forecast.get, ['url', 'lat_index', 'lon_index', 'forecast_days'])):
         forecast = cached_forecast['forecast']
     else:
         forecast = {}
@@ -100,19 +103,33 @@ def parse(latitude, longitude, data_keys, levels, forecast_days=3, utc_offset=0)
                 data_single_level = {}
                 if data_key not in forecast or f'{AVAIL_LEVELS[lev_index]}mb' not in forecast[data_key]:
                     sleep(1)
-                    data_arr = dataset[0:8 * forecast_days, lev_index, lat_index, lon_index]  # HERE COMES THE DATA!
+                    data_arr = dataset[0: 8 * forecast_days, lev_index, lat_index, lon_index]  # HERE COMES THE DATA!
                     time_vals, data_vals = get_data(data_arr, utc_offset)
                     forecast.setdefault('time', time_vals)
-                    assert forecast['time'][0] == time_vals[0]
+                    if forecast['time'][0] == time_vals[1]:  # TODO: Find a more reliable way than just shifting the data
+                        data_vals = data_vals[1:] + [None]
+                        time_vals = time_vals[1:] + [None]
+                    elif forecast['time'][1] == time_vals[0]:
+                        data_vals = [None] + data_vals[:-1]
+                        time_vals = [None] + time_vals[:-1]
+                    assert forecast['time'][0] == time_vals[0] or forecast['time'][1] == time_vals[1], \
+                        f"New data from {forecast['time'][0:1]}, cached data from {time_vals[0:1]}, dataset url: {url}"
                     data_single_level[f'{AVAIL_LEVELS[lev_index]}mb'] = data_vals
                     forecast.setdefault(data_key, {}).update(data_single_level)
         elif len(dataset.shape) == 3:  # for single-level data
             if data_key not in forecast:
                 sleep(1)
-                data_arr = dataset[0:8 * forecast_days, lat_index, lon_index]  # HERE COMES THE DATA!
+                data_arr = dataset[0: 8 * forecast_days, lat_index, lon_index]  # HERE COMES THE DATA!
                 time_vals, data_vals = get_data(data_arr, utc_offset)
                 forecast.setdefault('time', time_vals)
-                assert forecast['time'][0] == time_vals[0]
+                if forecast['time'][0] == time_vals[1]:  # TODO: Find a more reliable way than just shifting the data
+                    data_vals = data_vals[1:] + [None]
+                    time_vals = time_vals[1:] + [None]
+                elif forecast['time'][1] == time_vals[0]:
+                    data_vals = [None] + data_vals[:-1]
+                    time_vals = [None] + time_vals[:-1]
+                assert forecast['time'][0] == time_vals[0] or forecast['time'][1] == time_vals[1], \
+                    f"New data from {forecast['time'][0:1]}, cached data from {time_vals[0:1]}, dataset url: {url}"
                 forecast[data_key] = data_vals
         else:
             raise ValueError(f'Number of data columns {dataset.shape=} should be either 3 or 4.')

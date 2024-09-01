@@ -1,76 +1,56 @@
-import json
 from pprint import pprint
 
 from fastapi import FastAPI, Request, Query
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from decimal import Decimal
 import datetime
-from pydantic import BaseModel
+
 from fastapi.templating import Jinja2Templates
 from typing import List, Union, Optional, Dict, OrderedDict
 import parse
-from collections import OrderedDict as ordered_dict
+from collections import OrderedDict as OrdDict
 from open_meteo import open_meteo_simple
 
-
-class Forecast(BaseModel):
-    date: Union[datetime.date, str] = datetime.date(2024, 8, 1)
-    time: Union[datetime.time, str] = datetime.time(4, 0)
-    temperature: Optional[Decimal] = None
-    wind_direction: Optional[Decimal] = None
-    wind_speed: Optional[Decimal] = None
-    wind_gusts: Optional[Decimal] = None
-    precipitation: Optional[Decimal] = None
-    pbl_thickness: Optional[Decimal] = None
-
-
-class HourlyForecast(BaseModel):
-    temperature: Optional[Decimal] = None
-    wind_direction: Optional[Decimal] = None
-    wind_speed: Optional[Decimal] = None
-    wind_gusts: Optional[Decimal] = None
-    precipitation: Optional[Decimal] = None
-    pbl_thickness: Optional[Decimal] = None
-
-
-class DailyForecast(BaseModel):
-    # date: datetime.date = datetime.date(2024, 9, 1)
-    forecast_list: Optional[OrderedDict[datetime.time, HourlyForecast]] = None
-
-
-class NewForecast(BaseModel):
-    daily_forecast_list: Optional[OrderedDict[datetime.date, DailyForecast]] = None
-    # TODO: {date: {time: HourlyForecast}}
-    # TODO: Enum of keywords
+from models import Forecast
 
 
 def get_forecast(lat: Decimal = 56.33, lon: Decimal = 44, days: int = 10):
-    forecasts_dict = open_meteo_simple.get_forecast(lat, lon, days)
-    forecasts_dict_noaa = parse.parse(latitude=lat, longitude=lon, data_keys=['hpblsfc'], levels=[0], forecast_days=days)
-    forecasts = ordered_dict()
-    for i, dt in enumerate(forecasts_dict['hourly']['time']):
-        dt_dt = datetime.datetime.fromisoformat(dt)
-        forecast = Forecast(date=dt_dt.date(), time=dt_dt.time(), temperature=forecasts_dict['hourly']['temperature_2m'][i],
-                            wind_direction=forecasts_dict['hourly']["wind_direction_10m"][i], wind_speed=forecasts_dict['hourly']["wind_speed_10m"][i],
-                            wind_gusts=forecasts_dict['hourly']['wind_gusts_10m'][i], precipitation=forecasts_dict['hourly']['precipitation'][i])
+    forecasts_dict = open_meteo_simple.get_forecast(lat, lon, days)['hourly']  # from open-meteo
+    forecasts_dict_noaa = parse.parse(latitude=lat, longitude=lon, data_keys=['hpblsfc'], forecast_days=days)  # from NOAA
+    forecasts = OrdDict()
+
+    # TODO: How to get a variable by keyword? Dictionary, Enum, NamedTuple, getattr or a dataclass {name, key, value}
+    for dt_str, temperature, wind_direction, wind_speed, wind_gusts, cloud_cover, cloud_cover_low, precipitation, cape\
+            in zip(forecasts_dict['time'], forecasts_dict["temperature_2m"], forecasts_dict["wind_direction_10m"],
+                   forecasts_dict["wind_speed_10m"], forecasts_dict['wind_gusts_10m'], forecasts_dict['cloud_cover'],
+                   forecasts_dict['cloud_cover_low'], forecasts_dict['precipitation'], forecasts_dict['cape']):
+
+        dt_dt = datetime.datetime.fromisoformat(dt_str)
+
+        forecast = Forecast(date=dt_dt.date(), time=dt_dt.time(), temperature=temperature, wind_direction=wind_direction,
+                            wind_speed=round(wind_speed, 1) if wind_speed else wind_speed, wind_gusts=wind_gusts,
+                            cloud_cover=cloud_cover, cloud_cover_low=cloud_cover_low, precipitation=precipitation,
+                            cape=cape)
+
         if forecast.time.hour % 3 == 0:
             forecasts[dt_dt] = forecast
-    for dt, hpblsfc in zip(forecasts_dict_noaa['time'], forecasts_dict_noaa['hpblsfc']):
-        dt_dt = datetime.datetime.fromisoformat(dt)
+
+    for dt_str, pbl_thickness in zip(forecasts_dict_noaa['time'], forecasts_dict_noaa['hpblsfc']):
+        dt_dt = datetime.datetime.fromisoformat(dt_str)
         if dt_dt in forecasts:
-            forecasts[dt_dt].pbl_thickness = hpblsfc
+            forecasts[dt_dt].pbl_thickness = pbl_thickness
+
     return forecasts
 
 
 app = FastAPI()
-
-my_templates = Jinja2Templates(directory='templates')
+templates = Jinja2Templates(directory='templates')
 
 
 @app.get('/', response_class=HTMLResponse)
-def get_root(request: Request, lat: Decimal = 56.33, lon: Decimal = 44, days: int = 16):
+def get_root(request: Request, lat: Decimal = 56.33, lon: Decimal = 44, days: int = 14):
     forecasts = get_forecast(lat, lon, days)
-    return my_templates.TemplateResponse(request=request, name='index.html', context={'forecasts': forecasts})
+    return templates.TemplateResponse(request=request, name='index.html', context={'forecasts': forecasts})
 
 
 @app.get('/api/')
