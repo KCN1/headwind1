@@ -24,8 +24,8 @@
     <tbody>
         <tr>
             <th><small>date</small></th>
-            <th><small>time</small></th>
-            <th><small>t [°C] / Grad [°C/100m]</small></th>
+            <th><small>time (GMT)</small></th>
+            <th><small>t [°C] / Δt (2m - 100m)</small></th>
             <th><small>wind</small></th>
             <th><small>clouds (low)</small></th>
             <th><small>precipitation</small></th>
@@ -36,7 +36,8 @@
             <tr>
                 <th>{{dt.strftime('%a, %d.%m.%y')}}</th>
                 <td>{{forecast.time.isoformat(timespec='minutes')}}</td>
-                <td>{{forecast.temperature}} / {{(2 * forecast.temperature - forecast.temperature_80m - forecast.temperature_120m) / 2}}</td>
+                <td>{{forecast.temperature}} / {{forecast.temperature -
+                    (forecast.temperature_80m + forecast.temperature_120m) / 2}}</td>
                 <td>
                     <span style="text-align: left; width: 5ch; display: inline-block">{{forecast.wind_direction}}°</span>
                     <span style="text-align: left; width: 4ch; display: inline-block">{{forecast.wind_speed}}</span>

@@ -16,6 +16,11 @@ def capesfc(x):
     return x[0][0]
 
 
+def cinsfc(x):
+    "surface convective inhibition [j/kg]"
+    return x[0][0]
+
+
 def dpt2m(x):
     "2 m above ground dew point temperature [k]"
     return x[0][0] - 273.15
@@ -61,8 +66,18 @@ def lcdcavelcll(x):
     return x[0][0]
 
 
+def lftxsfc(x):
+    "surface surface lifted index [k]"
+    return x[0][0]
+
+
 def mcdcavemcll(x):
     "middle cloud layer medium cloud cover [%]"
+    return x[0][0]
+
+
+def no4lftxsfc(x):
+    "surface best (4 layer) lifted index [k]"
     return x[0][0]
 
 

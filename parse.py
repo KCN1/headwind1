@@ -141,7 +141,7 @@ def main():
     longitude = 44
     utc_offset = 3
 
-    data_keys = ['prateavesfc', 'tmp80m', 'tmp2m', 'tmpprs', 'hpblsfc', 'lcdcavelcll', 'tcdcaveclm']
+    data_keys = ['cinsfc', 'hgtprs']
     levels = [950, 900]
     forecast_days = 14
 
