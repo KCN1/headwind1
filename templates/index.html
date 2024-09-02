@@ -14,29 +14,29 @@
     <colgroup>
         <col width="6%">
         <col width="5%">
-        <col width="5%">
+        <col width="7%">
         <col width="10%">
         <col width="5%">
         <col width="5%">
         <col width="5%">
-        <col width="5%">
+        <col width="7%">
     </colgroup>
     <tbody>
         <tr>
             <th><small>date</small></th>
             <th><small>time</small></th>
-            <th><small>temperature</small></th>
+            <th><small>t [°C] / Grad [°C/100m]</small></th>
             <th><small>wind</small></th>
             <th><small>clouds (low)</small></th>
             <th><small>precipitation</small></th>
             <th><small>PBL thickness</small></th>
-            <th><small>CAPE [J/kg]</small></th>
+            <th><small>CAPE [J/kg] / Weather code</small></th>
         </tr>
         {% for dt, forecast in forecasts.items() -%}
             <tr>
                 <th>{{dt.strftime('%a, %d.%m.%y')}}</th>
                 <td>{{forecast.time.isoformat(timespec='minutes')}}</td>
-                <td>{{forecast.temperature}}</td>
+                <td>{{forecast.temperature}} / {{(2 * forecast.temperature - forecast.temperature_80m - forecast.temperature_120m) / 2}}</td>
                 <td>
                     <span style="text-align: left; width: 5ch; display: inline-block">{{forecast.wind_direction}}°</span>
                     <span style="text-align: left; width: 4ch; display: inline-block">{{forecast.wind_speed}}</span>
@@ -44,9 +44,9 @@
                     <span style="text-align: left; width: 4ch; display: inline-block">{{forecast.wind_gusts}}</span>
                 </td>
                 <td>{{forecast.cloud_cover}} ({{forecast.cloud_cover_low}})</td>
-                <td>{{forecast.precipitation}}</td>
+                <td>{{forecast.precipitation}} ({{forecast.precipitation_probability}}%)</td>
                 <td>{{forecast.pbl_thickness}}</td>
-                <td>{{forecast.cape}}</td>
+                <td>{{forecast.cape}} / {{forecast.weather_code}}</td>
             </tr>
         {% endfor -%}
     </tbody>

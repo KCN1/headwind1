@@ -1,19 +1,12 @@
 import datetime
 import json
-
 import re
 import time
-
 from pprint import pprint
-from typing import List, Dict, Union
-import requests
 from time import sleep
-
 import requests_cache
-from pydantic import BaseModel, Field
 from pydap.client import open_url
 from decimal import Decimal
-
 import converter
 
 
@@ -150,7 +143,7 @@ def main():
 
     data_keys = ['prateavesfc', 'tmp80m', 'tmp2m', 'tmpprs', 'hpblsfc', 'lcdcavelcll', 'tcdcaveclm']
     levels = [950, 900]
-    forecast_days = 10
+    forecast_days = 14
 
     t0 = time.perf_counter()
     forecast = parse(latitude, longitude, data_keys, levels, forecast_days, utc_offset)

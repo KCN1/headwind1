@@ -1,0 +1,1 @@
+Draft of a weather forecast for paragliding.

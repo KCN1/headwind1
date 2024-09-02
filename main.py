@@ -19,18 +19,21 @@ def get_forecast(lat: Decimal = 56.33, lon: Decimal = 44, days: int = 10):
     forecasts_dict_noaa = parse.parse(latitude=lat, longitude=lon, data_keys=['hpblsfc'], forecast_days=days)  # from NOAA
     forecasts = OrdDict()
 
-    # TODO: How to get a variable by keyword? Dictionary, Enum, NamedTuple, getattr or a dataclass {name, key, value}
-    for dt_str, temperature, wind_direction, wind_speed, wind_gusts, cloud_cover, cloud_cover_low, precipitation, cape\
-            in zip(forecasts_dict['time'], forecasts_dict["temperature_2m"], forecasts_dict["wind_direction_10m"],
-                   forecasts_dict["wind_speed_10m"], forecasts_dict['wind_gusts_10m'], forecasts_dict['cloud_cover'],
-                   forecasts_dict['cloud_cover_low'], forecasts_dict['precipitation'], forecasts_dict['cape']):
-
+    # TODO: How to get a variable by keyword? Dictionary, Enum, NamedTuple, getattr or new dataclass {name, key, value}
+    for (dt_str, temperature, temperature_80m, temperature_120m, wind_direction, wind_speed, wind_gusts,
+         cloud_cover, cloud_cover_low, precipitation, precipitation_probability, weather_code, cape) in zip(
+            forecasts_dict['time'], forecasts_dict["temperature_2m"], forecasts_dict['temperature_80m'],
+            forecasts_dict['temperature_120m'], forecasts_dict["wind_direction_10m"], forecasts_dict["wind_speed_10m"],
+            forecasts_dict['wind_gusts_10m'], forecasts_dict['cloud_cover'], forecasts_dict['cloud_cover_low'],
+            forecasts_dict['precipitation'], forecasts_dict['precipitation_probability'], forecasts_dict['weather_code'],
+            forecasts_dict['cape']):
         dt_dt = datetime.datetime.fromisoformat(dt_str)
 
-        forecast = Forecast(date=dt_dt.date(), time=dt_dt.time(), temperature=temperature, wind_direction=wind_direction,
+        forecast = Forecast(date=dt_dt.date(), time=dt_dt.time(), temperature=temperature, temperature_80m=temperature_80m,
+                            temperature_120m=temperature_120m, wind_direction=wind_direction,
                             wind_speed=round(wind_speed, 1) if wind_speed else wind_speed, wind_gusts=wind_gusts,
                             cloud_cover=cloud_cover, cloud_cover_low=cloud_cover_low, precipitation=precipitation,
-                            cape=cape)
+                            precipitation_probability=precipitation_probability, weather_code=weather_code, cape=cape)
 
         if forecast.time.hour % 3 == 0:
             forecasts[dt_dt] = forecast
@@ -64,7 +67,7 @@ def get_api_forecast():
 
 
 @app.get('/api/v1/forecast', response_class=JSONResponse)
-def get_api_v1(lat: Decimal, lon: Decimal, keywords: List[str] = Query(default=['tmp2m']), levels: List[int] = Query(default=[0]), days: int = 10, utc_offset: int = 3):
+def get_api_v1(lat: Decimal, lon: Decimal, keywords: List[str] = Query(default=['tmp2m']), levels: List[int] = Query(default=[1000]), days: int = 14, utc_offset: int = 0):
     # forecast = parse.parse(latitude=lat, longitude=lon, utc_offset=utc_offset, data_keys=keyword, levels=lev, forecast_days=days)
     forecast = open_meteo_simple.get_forecast(lat, lon, days)
     return forecast
