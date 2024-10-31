@@ -2,55 +2,114 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>headwind</title>
     <style>
-        th,td {text-align: center}
-        tr:nth-child(even) {background-color: #ccffee}
-        body {font-family: Verdana, Arial, sans-serif;}
+        header {background-color: #ccffee; padding: 0.5rem;}
+        th,td {text-align: right; padding: 0.25ch;}
+        tr:nth-child(odd) {background-color: whitesmoke;}
+        tr:nth-child(odd) .oldData {background-color: #fafafa;}
+        body {font-family: "Open Sans", Helvetica, Verdana, Arial, sans-serif;}
+        img {height: 5ch; object-fit: cover; vertical-align: middle; margin: -15%; filter: brightness(75%) contrast(150%);}
+        svg {height: 2.5ch; vertical-align: bottom;}
+        table {table-layout: auto; max-width: 100ch; border-collapse: collapse; margin-top: 3rem;}
+        #coords span {display: inline-block;}
+        .date {text-align: right; vertical-align: top; background-color: white; padding-right: 1ch; font-size: 1.2rem}
+        .tableHeader {font-size: 0.9rem; text-align: center;}
+        .tableHeader th {padding: 0.3rem;}
+        .oldData {color: darkgray;}
+        .oldData img, .oldData svg {filter: contrast(25%) brightness(150%);}
+        .cloudsLow {text-align: left;}
+        .precipitationProb {text-align: left;}
+        @media (max-width: 799px) {
+            .wind2, .wind3, .wind2h {display: none;}
+            .date {padding-right: 0.5ch; font-size: 1rem;}
+        }
     </style>
 </head>
 <body>
+<header>
+<div align='center'><b>
+<form style='display: inline' id='coords' name='coords'>Coordinates:
+    <input id='lat' name='lat' value=56 size=4>
+    <input id='lon' name='lon' value=44  size=4>
+ ┃ Elevation:
+    <input id='elev' size=4 disabled>
+ ┃
+<span>Level:
+<select id='lev' name='lev'>
+    <option value='950hPa'>950mb (~500m ASL)</option>
+    <option value='925hPa' selected>925mb (~750m ASL)</option>
+    <option value='900hPa'>900mb (~1000m ASL)</option>
+    <option value='850hPa'>850mb (~1500m ASL)</option>
+    <option value='800hPa'>800mb (~2000m ASL)</option>
+</select> ┃ </span>
+<span>Model:
+<select id='model' name='model'>
+    <option value='gfs_seamless' selected>GFS 0.11-0.25°</option>
+    <option value='ecmwf_ifs025'>ECMWF 0.25°</option>
+    <option value='icon_seamless'>ICON 0.1°</option>
+    <option value='ukmo_seamless'>UK Met 0.09°</option>
+    <option value='meteofrance_seamless'>Met France 0.25°</option>
+</select> ┃ </span>
+<span>
+    1h
+    <input type="checkbox" name="hly" id="hly">
+    <button type='submit'>Submit</button>
+    <button type='reset'>Reset</button>
+</span>
+</form>
+</b></div>
+<div hidden id='someshit'></div>
+</header>
+<main>
+<div align='center' max-width='device-width'>
 <table>
     <colgroup>
-        <col width="6%">
-        <col width="5%">
-        <col width="7%">
         <col width="10%">
-        <col width="5%">
-        <col width="5%">
-        <col width="5%">
         <col width="7%">
+        <col width="7%">
+        <col width="7%">
+        <col width="20%">
+        <col width="12%">
+        <col width="10%">
+        <col width="10%">
     </colgroup>
-    <tbody>
-        <tr>
-            <th><small>date</small></th>
-            <th><small>time (GMT)</small></th>
-            <th><small>t [°C] / Δt (2m - 100m)</small></th>
-            <th><small>wind</small></th>
-            <th><small>clouds (low)</small></th>
-            <th><small>precipitation</small></th>
-            <th><small>PBL thickness</small></th>
-            <th><small>CAPE [J/kg] / Weather code</small></th>
+    <tbody id="mainTable">
+        <tr class="tableHeader">
+            <th hidden>date&time (ISO)</th>
+            <th colspan=2>date ┃ time (<span id='tzone'>GMT</span>)&nbsp;</th>
+            <th colspan=2>weather ┃ t&nbsp;[°C]</th>
+            <th>wind » gusts [m/s]</th>
+            <th>%clouds ┃ low</th>
+            <th>precipi&shy;tation</th>
+            <th style='text-align: right'>PBL [m]</th>
         </tr>
+
         {% for dt, forecast in forecasts.items() -%}
             <tr>
                 <th>{{dt.strftime('%a, %d.%m.%y')}}</th>
                 <td>{{forecast.time.isoformat(timespec='minutes')}}</td>
-                <td>{{forecast.temperature}} / {{forecast.temperature -
-                    (forecast.temperature_80m + forecast.temperature_120m) / 2}}</td>
+                <td><img src={{descriptions[forecast.weather_code][('night','day')[forecast.is_day]]['image']}}></td>
+                <td>{{forecast.temperature}}</td>
                 <td>
-                    <span style="text-align: left; width: 5ch; display: inline-block">{{forecast.wind_direction}}°</span>
+                    <span style="text-align: left; width: 5ch; display: inline-block"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40">
+                        <title>{{forecast.wind_direction}}°</title><g id="arrow"><path d="M 21.2,1.52 L 18.72,1.52
+                        L 18.72,32.08 C 17.68,30.0 15.84,27.68 14.08,25.84 L 12.8,28.24 C 15.6,31.04 18.16,34.96 20.0,38.48
+                        C 21.76,34.96 24.48,31.04 27.2,28.24 L 25.92,25.84 C 24.16,27.68 22.24,30.0 21.2,32.08 z"
+                        style="fill:black" transform="rotate({{forecast.wind_direction}} 20 20)"/></g></svg></span>
                     <span style="text-align: left; width: 4ch; display: inline-block">{{forecast.wind_speed}}</span>
-                    <span style="text-align: left; width: 3ch; display: inline-block">→</span>
+                    <span style="text-align: left; width: 3ch; display: inline-block">>></span>
                     <span style="text-align: left; width: 4ch; display: inline-block">{{forecast.wind_gusts}}</span>
                 </td>
                 <td>{{forecast.cloud_cover}} ({{forecast.cloud_cover_low}})</td>
                 <td>{{forecast.precipitation}} ({{forecast.precipitation_probability}}%)</td>
-                <td>{{forecast.pbl_thickness}}</td>
-                <td>{{forecast.cape}} / {{forecast.weather_code}}</td>
+                <td>{{forecast.pbl_height}}</td>
             </tr>
         {% endfor -%}
     </tbody>
 </table>
+</div>
+</main>
 </body>
 </html>

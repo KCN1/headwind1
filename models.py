@@ -19,9 +19,10 @@ class Forecast(BaseModel):
     cloud_cover_low: Optional[Decimal] = None
     precipitation: Optional[Decimal] = None
     precipitation_probability: Optional[Decimal] = None
-    pbl_thickness: Optional[Decimal] = None
+    pbl_height: Optional[Decimal] = None
     cape: Optional[Decimal] = None
-    weather_code: Optional[int] = None
+    weather_code: Optional[Union[int, str]] = None
+    is_day: Optional[bool] = None
 
 
 class HourlyForecast(BaseModel):
