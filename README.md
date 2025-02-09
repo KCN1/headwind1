@@ -1,1 +1,1 @@
-Draft of a weather forecast for paragliding.
+Draft of a weather forecast for paragliding (playground).
